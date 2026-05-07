@@ -1,0 +1,92 @@
+<Window x:Class="ImageSearch.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="图片内容检索系统" Height="800" Width="1200"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 头部搜索区域 -->
+        <Border Grid.Row="0" Background="#1E293B" Padding="20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBox Grid.Column="0" x:Name="SearchBox" Style="{StaticResource SearchTextBox}"
+                         PlaceholderText="输入要搜索的文本（如：B260114S5028）"
+                         KeyDown="SearchBox_KeyDown"/>
+                
+                <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" 
+                        Margin="10,0,5,0" Click="SearchButton_Click">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="🔍"/>
+                        <TextBlock Text="搜索" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Button>
+                
+                <Button Grid.Column="2" Style="{StaticResource PrimaryButton}" 
+                        Margin="5,0,5,0" Click="IndexButton_Click">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="📷"/>
+                        <TextBlock Text="建立索引" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Button>
+                
+                <Button Grid.Column="3" Style="{StaticResource PrimaryButton}" 
+                        Margin="5,0,0,0" Click="SelectFolderButton_Click">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="📁"/>
+                        <TextBlock Text="选择目录" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- 状态栏 -->
+        <Border Grid.Row="1" Background="#F1F5F9" Padding="10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <TextBlock Style="{StaticResource StatusText}" Text="状态: " />
+                <TextBlock x:Name="StatusText" Style="{StaticResource StatusText}" Text="就绪" />
+                <TextBlock Style="{StaticResource StatusText}" Margin="20,0,0,0" Text="索引图片: " />
+                <TextBlock x:Name="IndexedCount" Style="{StaticResource StatusText}" Text="0" />
+                <TextBlock Style="{StaticResource StatusText}" Margin="20,0,0,0" Text="搜索耗时: " />
+                <TextBlock x:Name="SearchTime" Style="{StaticResource StatusText}" Text="0ms" />
+                <TextBlock Style="{StaticResource StatusText}" Margin="20,0,0,0" Text="结果数: " />
+                <TextBlock x:Name="ResultCount" Style="{StaticResource StatusText}" Text="0" />
+            </StackPanel>
+        </Border>
+
+        <!-- 进度条（索引时显示） -->
+        <Border Grid.Row="2" Background="White" Visibility="Collapsed" x:Name="ProgressBorder">
+            <Grid>
+                <ProgressBar x:Name="IndexProgress" Minimum="0" Maximum="100" Height="20" 
+                            Margin="20" VerticalAlignment="Center"/>
+                <TextBlock x:Name="ProgressText" Text="正在建立索引..." 
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- 结果展示区域 -->
+        <ScrollViewer Grid.Row="2" x:Name="ResultScroll" Visibility="Visible">
+            <WrapPanel x:Name="ResultPanel" Margin="10" HorizontalAlignment="Left"/>
+        </ScrollViewer>
+
+        <!-- 底部信息 -->
+        <Border Grid.Row="3" Background="#E2E8F0" Padding="10">
+            <TextBlock Style="{StaticResource StatusText}" 
+                       Text="提示: 首次使用请先选择图片目录并建立索引，支持 JPG、PNG、BMP、TIFF 格式"/>
+        </Border>
+    </Grid>
+</Window>
