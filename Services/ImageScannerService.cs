@@ -18,6 +18,12 @@ namespace ImageSearch.Services
         private CancellationTokenSource? _cancellationTokenSource;
         private int _processedCount;
         private int _totalCount;
+        
+        // 工业级配置
+        private const int OCR_WORKER_COUNT = 4;           // 固定OCR线程数
+        private const int QUEUE_MAX_CAPACITY = 1000;      // 队列最大缓存
+        private const int BATCH_WRITE_SIZE = 100;         // 批量写入大小
+        private const long MEMORY_THRESHOLD = 1_500_000_000; // 内存压力阈值(1.5GB)
 
         public event EventHandler<ScanProgressEventArgs>? ProgressChanged;
         public event EventHandler? ScanCompleted;
@@ -43,30 +49,46 @@ namespace ImageSearch.Services
 
                 OnProgressChanged(0, "开始扫描图片...");
 
-                var parallelOptions = new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = Environment.ProcessorCount,
-                    CancellationToken = _cancellationTokenSource.Token
-                };
+                // 创建带容量限制的阻塞队列
+                var imageQueue = new BlockingCollection<string>(QUEUE_MAX_CAPACITY);
+                var resultQueue = new BlockingCollection<ImageIndexResult>(QUEUE_MAX_CAPACITY);
+                
+                // 创建OCR信号量控制并发
+                var ocrSemaphore = new SemaphoreSlim(OCR_WORKER_COUNT, OCR_WORKER_COUNT);
 
-                var tasks = new ConcurrentQueue<Task>();
+                // 启动DB写入线程（单线程）
+                var dbWriterTask = Task.Run(() => DatabaseWriter(resultQueue, _cancellationTokenSource.Token));
 
-                Parallel.ForEach(imageFiles, parallelOptions, (filePath, state) =>
+                // 启动OCR Worker池
+                var ocrTasks = new List<Task>();
+                for (int i = 0; i < OCR_WORKER_COUNT; i++)
                 {
-                    if (_cancellationTokenSource.Token.IsCancellationRequested)
+                    ocrTasks.Add(Task.Run(() => OcrWorker(imageQueue, resultQueue, ocrSemaphore, skipExisting, _cancellationTokenSource.Token)));
+                }
+
+                // Producer: 扫描线程
+                await Task.Run(() =>
+                {
+                    foreach (var filePath in imageFiles)
                     {
-                        state.Break();
-                        return;
+                        if (_cancellationTokenSource.Token.IsCancellationRequested)
+                            break;
+
+                        // 内存压力控制
+                        CheckMemoryPressure();
+
+                        // 阻塞直到队列有空间
+                        imageQueue.Add(filePath, _cancellationTokenSource.Token);
                     }
-
-                    ProcessImage(filePath, skipExisting);
-
-                    var current = Interlocked.Increment(ref _processedCount);
-                    var progress = (int)((current / (double)_totalCount) * 100);
-                    OnProgressChanged(progress, $"已处理 {current}/{_totalCount}");
+                    imageQueue.CompleteAdding();
                 });
 
-                await Task.WhenAll(tasks);
+                // 等待所有OCR Worker完成
+                await Task.WhenAll(ocrTasks);
+                resultQueue.CompleteAdding();
+
+                // 等待DB写入完成
+                await dbWriterTask;
 
                 OnProgressChanged(100, "索引建立完成");
                 ScanCompleted?.Invoke(this, EventArgs.Empty);
@@ -84,6 +106,78 @@ namespace ImageSearch.Services
         public void CancelScan()
         {
             _cancellationTokenSource?.Cancel();
+        }
+
+        private void CheckMemoryPressure()
+        {
+            if (GC.GetTotalMemory(false) > MEMORY_THRESHOLD)
+            {
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForPendingFinalizers();
+            }
+        }
+
+        private async Task OcrWorker(
+            BlockingCollection<string> imageQueue,
+            BlockingCollection<ImageIndexResult> resultQueue,
+            SemaphoreSlim ocrSemaphore,
+            bool skipExisting,
+            CancellationToken token)
+        {
+            try
+            {
+                foreach (var filePath in imageQueue.GetConsumingEnumerable(token))
+                {
+                    await ocrSemaphore.WaitAsync(token);
+                    try
+                    {
+                        var result = ProcessImage(filePath, skipExisting);
+                        if (result != null && !string.IsNullOrWhiteSpace(result.OcrText))
+                        {
+                            resultQueue.Add(result, token);
+                        }
+
+                        var current = Interlocked.Increment(ref _processedCount);
+                        var progress = (int)((current / (double)_totalCount) * 100);
+                        OnProgressChanged(progress, $"已处理 {current}/{_totalCount}");
+                    }
+                    finally
+                    {
+                        ocrSemaphore.Release();
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        private async Task DatabaseWriter(BlockingCollection<ImageIndexResult> resultQueue, CancellationToken token)
+        {
+            var batch = new List<ImageIndexResult>();
+
+            try
+            {
+                foreach (var result in resultQueue.GetConsumingEnumerable(token))
+                {
+                    batch.Add(result);
+
+                    if (batch.Count >= BATCH_WRITE_SIZE)
+                    {
+                        await _dbService.BatchInsertImageIndex(batch);
+                        batch.Clear();
+                    }
+                }
+
+                // 处理剩余数据
+                if (batch.Count > 0)
+                {
+                    await _dbService.BatchInsertImageIndex(batch);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
         }
 
         private List<string> GetAllImageFiles(string rootDirectory)
@@ -107,43 +201,47 @@ namespace ImageSearch.Services
             return files;
         }
 
-        private void ProcessImage(string filePath, bool skipExisting)
+        private ImageIndexResult? ProcessImage(string filePath, bool skipExisting)
         {
             try
             {
                 var fileInfo = new FileInfo(filePath);
                 var fileMd5 = CalculateMd5(filePath);
 
-                // 检查是否已存在（通过MD5或路径）
                 if (skipExisting)
                 {
                     if (_dbService.IsMd5Exists(fileMd5))
-                        return;
+                        return null;
 
                     if (_dbService.IsFilePathExists(filePath))
                     {
-                        // 检查文件是否被修改
                         var storedLastModified = _dbService.GetLastModified(filePath);
                         if (storedLastModified.HasValue && 
                             storedLastModified.Value >= fileInfo.LastWriteTime)
                         {
-                            return;
+                            return null;
                         }
                     }
                 }
 
-                // OCR识别
                 var ocrText = _ocrService.RecognizeText(filePath);
 
-                // 如果识别到文本，存入数据库
                 if (!string.IsNullOrWhiteSpace(ocrText))
                 {
-                    _dbService.InsertImageIndex(filePath, ocrText, fileMd5, fileInfo.LastWriteTime);
+                    return new ImageIndexResult
+                    {
+                        FilePath = filePath,
+                        OcrText = ocrText,
+                        Md5 = fileMd5,
+                        LastModified = fileInfo.LastWriteTime
+                    };
                 }
             }
             catch (Exception)
             {
             }
+
+            return null;
         }
 
         private string CalculateMd5(string filePath)
@@ -158,6 +256,14 @@ namespace ImageSearch.Services
         {
             ProgressChanged?.Invoke(this, new ScanProgressEventArgs(progress, message));
         }
+    }
+
+    public class ImageIndexResult
+    {
+        public string FilePath { get; set; } = string.Empty;
+        public string OcrText { get; set; } = string.Empty;
+        public string Md5 { get; set; } = string.Empty;
+        public DateTime LastModified { get; set; }
     }
 
     public class ScanProgressEventArgs : EventArgs

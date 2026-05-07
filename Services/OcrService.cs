@@ -28,7 +28,7 @@ namespace ImageSearch.Services
                     _ocr = new PaddleOcrAll(
                         PaddleOcrModels.Local.EnglishV3,
                         enable_mkldnn: true,
-                        cpuThreadNum: Environment.ProcessorCount
+                        cpuThreadNum: Math.Max(1, Environment.ProcessorCount / 2)
                     );
                     _isInitialized = true;
                 }
@@ -37,7 +37,7 @@ namespace ImageSearch.Services
                     _ocr = new PaddleOcrAll(
                         PaddleOcrModels.Local.EnglishV3,
                         enable_mkldnn: false,
-                        cpuThreadNum: Environment.ProcessorCount
+                        cpuThreadNum: Math.Max(1, Environment.ProcessorCount / 2)
                     );
                     _isInitialized = true;
                 }
@@ -51,15 +51,48 @@ namespace ImageSearch.Services
                 Initialize();
             }
 
+            if (_ocr == null)
+                return string.Empty;
+
+            // 使用 using 语句确保所有资源都被正确释放
+            using var originalMat = Cv2.ImRead(imagePath, ImreadModes.Color);
+            
+            if (originalMat.Empty())
+                return string.Empty;
+
             try
             {
-                var processedImage = PreprocessImage(imagePath);
-                using var mat = processedImage.Item1;
-                using var bitmap = processedImage.Item2;
+                using var grayMat = new Mat();
+                Cv2.CvtColor(originalMat, grayMat, ColorConversionCodes.BGR2GRAY);
 
-                if (_ocr == null)
-                    return string.Empty;
+                using var clahe = Cv2.CreateCLAHE(2.0, new Size(8, 8));
+                using var enhancedMat = new Mat();
+                clahe.Apply(grayMat, enhancedMat);
 
+                using var binaryMat = new Mat();
+                Cv2.AdaptiveThreshold(
+                    enhancedMat, 
+                    binaryMat, 
+                    255, 
+                    AdaptiveThresholdTypes.GaussianC, 
+                    ThresholdTypes.Binary, 
+                    11, 
+                    2
+                );
+
+                using var denoisedMat = new Mat();
+                Cv2.MedianBlur(binaryMat, denoisedMat, 3);
+
+                using var kernel = new Mat(3, 3, MatType.CV_32F, new float[] {
+                    -1, -1, -1,
+                    -1,  9, -1,
+                    -1, -1, -1
+                });
+                using var sharpenedMat = new Mat();
+                Cv2.Filter2D(denoisedMat, sharpenedMat, -1, kernel);
+
+                // 转换为Bitmap并立即使用后释放
+                using var bitmap = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(sharpenedMat);
                 var result = _ocr.Run(bitmap);
                 return CleanOcrResult(result);
             }
@@ -69,60 +102,11 @@ namespace ImageSearch.Services
             }
         }
 
-        private Tuple<Mat, Bitmap> PreprocessImage(string imagePath)
-        {
-            using var originalMat = Cv2.ImRead(imagePath, ImreadModes.Color);
-            
-            if (originalMat.Empty())
-            {
-                return Tuple.Create(new Mat(), new Bitmap(1, 1));
-            }
-
-            // 转换为灰度图
-            using var grayMat = new Mat();
-            Cv2.CvtColor(originalMat, grayMat, ColorConversionCodes.BGR2GRAY);
-
-            // 对比度增强
-            using var clahe = Cv2.CreateCLAHE(2.0, new Size(8, 8));
-            using var enhancedMat = new Mat();
-            clahe.Apply(grayMat, enhancedMat);
-
-            // 二值化（使用自适应阈值）
-            using var binaryMat = new Mat();
-            Cv2.AdaptiveThreshold(
-                enhancedMat, 
-                binaryMat, 
-                255, 
-                AdaptiveThresholdTypes.GaussianC, 
-                ThresholdTypes.Binary, 
-                11, 
-                2
-            );
-
-            // 降噪（中值滤波）
-            using var denoisedMat = new Mat();
-            Cv2.MedianBlur(binaryMat, denoisedMat, 3);
-
-            // 锐化
-            using var kernel = new Mat(3, 3, MatType.CV_32F, new float[] {
-                -1, -1, -1,
-                -1,  9, -1,
-                -1, -1, -1
-            });
-            using var sharpenedMat = new Mat();
-            Cv2.Filter2D(denoisedMat, sharpenedMat, -1, kernel);
-
-            // 转换为Bitmap
-            var bitmap = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(sharpenedMat);
-            return Tuple.Create(sharpenedMat.Clone(), bitmap);
-        }
-
         private string CleanOcrResult(PaddleOcrResult result)
         {
             if (result == null || result.RecognizedTexts == null)
                 return string.Empty;
 
-            // 过滤只保留字母和数字
             var allowedChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
             
             var cleanedTexts = result.RecognizedTexts

@@ -1,8 +1,10 @@
+using ImageSearch.Services;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace ImageSearch.Data
 {
@@ -109,6 +111,8 @@ namespace ImageSearch.Data
             using var connection = new SqliteConnection($"Data Source={_dbPath}");
             connection.Open();
 
+            using var transaction = connection.BeginTransaction();
+
             using var cmd = connection.CreateCommand();
             cmd.CommandText = @"
                 INSERT OR REPLACE INTO image_index (file_path, ocr_text, md5, create_time, last_modified)
@@ -120,6 +124,59 @@ namespace ImageSearch.Data
             cmd.Parameters.AddWithValue("@lastModified", lastModified);
 
             cmd.ExecuteNonQuery();
+
+            transaction.Commit();
+        }
+
+        public async Task BatchInsertImageIndex(List<ImageIndexResult> results)
+        {
+            if (results == null || results.Count == 0)
+                return;
+
+            using var connection = new SqliteConnection($"Data Source={_dbPath}");
+            await connection.OpenAsync();
+
+            using var transaction = await connection.BeginTransactionAsync();
+
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                INSERT OR REPLACE INTO image_index (file_path, ocr_text, md5, create_time, last_modified)
+                VALUES (@filePath, @ocrText, @md5, @createTime, @lastModified)";
+
+            var filePathParam = cmd.CreateParameter();
+            filePathParam.ParameterName = "@filePath";
+            cmd.Parameters.Add(filePathParam);
+
+            var ocrTextParam = cmd.CreateParameter();
+            ocrTextParam.ParameterName = "@ocrText";
+            cmd.Parameters.Add(ocrTextParam);
+
+            var md5Param = cmd.CreateParameter();
+            md5Param.ParameterName = "@md5";
+            cmd.Parameters.Add(md5Param);
+
+            var createTimeParam = cmd.CreateParameter();
+            createTimeParam.ParameterName = "@createTime";
+            cmd.Parameters.Add(createTimeParam);
+
+            var lastModifiedParam = cmd.CreateParameter();
+            lastModifiedParam.ParameterName = "@lastModified";
+            cmd.Parameters.Add(lastModifiedParam);
+
+            var now = DateTime.Now;
+
+            foreach (var result in results)
+            {
+                filePathParam.Value = result.FilePath;
+                ocrTextParam.Value = result.OcrText;
+                md5Param.Value = result.Md5;
+                createTimeParam.Value = now;
+                lastModifiedParam.Value = result.LastModified;
+
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            await transaction.CommitAsync();
         }
 
         public List<string> SearchByOcrText(string query, bool fuzzy = false)
