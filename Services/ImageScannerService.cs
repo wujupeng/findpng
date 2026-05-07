@@ -191,14 +191,43 @@ namespace ImageSearch.Services
                     files.AddRange(GetAllImageFiles(directory));
                 }
 
-                files.AddRange(Directory.EnumerateFiles(rootDirectory)
-                    .Where(file => _supportedExtensions.Contains(Path.GetExtension(file).ToLower())));
+                var imageFiles = Directory.EnumerateFiles(rootDirectory)
+                    .Where(file => _supportedExtensions.Contains(Path.GetExtension(file).ToLower()))
+                    .ToList();
+                
+                // 记录找到的图片文件
+                if (imageFiles.Count > 0)
+                {
+                    LogMessage($"Found {imageFiles.Count} images in {rootDirectory}");
+                    foreach (var img in imageFiles.Take(5)) // 最多记录5个
+                    {
+                        LogMessage($"  - {Path.GetFileName(img)}");
+                    }
+                }
+                
+                files.AddRange(imageFiles);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
+                LogMessage($"Access denied: {rootDirectory}");
             }
 
             return files;
+        }
+
+        private void LogMessage(string message)
+        {
+            try
+            {
+                var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ImageSearch", "Logs");
+                if (!Directory.Exists(logDir))
+                    Directory.CreateDirectory(logDir);
+
+                var logPath = Path.Combine(logDir, "scan_log.txt");
+                using var writer = new StreamWriter(logPath, true);
+                writer.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}");
+            }
+            catch { }
         }
 
         private ImageIndexResult? ProcessImage(string filePath, bool skipExisting)
@@ -208,10 +237,15 @@ namespace ImageSearch.Services
                 var fileInfo = new FileInfo(filePath);
                 var fileMd5 = CalculateMd5(filePath);
 
+                LogMessage($"Processing: {Path.GetFileName(filePath)}");
+
                 if (skipExisting)
                 {
                     if (_dbService.IsMd5Exists(fileMd5))
+                    {
+                        LogMessage($"  - Skipped: MD5 exists in database");
                         return null;
+                    }
 
                     if (_dbService.IsFilePathExists(filePath))
                     {
@@ -219,15 +253,18 @@ namespace ImageSearch.Services
                         if (storedLastModified.HasValue && 
                             storedLastModified.Value >= fileInfo.LastWriteTime)
                         {
+                            LogMessage($"  - Skipped: File exists and not modified");
                             return null;
                         }
                     }
                 }
 
+                LogMessage($"  - Running OCR...");
                 var ocrText = _ocrService.RecognizeText(filePath);
 
                 if (!string.IsNullOrWhiteSpace(ocrText))
                 {
+                    LogMessage($"  - OCR Result: {ocrText.Substring(0, Math.Min(50, ocrText.Length))}...");
                     return new ImageIndexResult
                     {
                         FilePath = filePath,

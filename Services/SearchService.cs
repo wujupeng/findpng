@@ -2,6 +2,7 @@ using ImageSearch.Data;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 
 namespace ImageSearch.Services
 {
@@ -27,29 +28,48 @@ namespace ImageSearch.Services
 
             try
             {
-                // 首先尝试FTS5全文搜索（精确匹配）
-                var ftsResults = _dbService.SearchByOcrText(query);
+                // 首先尝试LIKE模糊搜索（确保数字能被正确搜索）
+                var fuzzyResults = _dbService.SearchByFuzzyLike(query);
                 
-                if (ftsResults.Count > 0)
+                LogSearchAttempt($"Query: {query}, LIKE results: {fuzzyResults.Count}");
+                
+                if (fuzzyResults.Count > 0)
                 {
-                    results.AddRange(ftsResults);
+                    results.AddRange(fuzzyResults);
                 }
                 else
                 {
-                    // 如果没有结果，尝试模糊搜索
-                    var fuzzyResults = _dbService.SearchByFuzzyLike(query);
-                    results.AddRange(fuzzyResults);
+                    // 如果没有结果，尝试FTS5全文搜索
+                    var ftsResults = _dbService.SearchByOcrText(query, true);
+                    LogSearchAttempt($"Query: {query}, FTS results: {ftsResults.Count}");
+                    results.AddRange(ftsResults);
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // 如果FTS5失败，回退到LIKE搜索
+                // 如果都失败，回退到LIKE搜索
+                LogSearchAttempt($"Search error: {ex.Message}");
                 results.AddRange(_dbService.SearchByFuzzyLike(query));
             }
 
             stopwatch.Stop();
 
             return new SearchResult(results, stopwatch.ElapsedMilliseconds);
+        }
+
+        private void LogSearchAttempt(string message)
+        {
+            try
+            {
+                var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ImageSearch", "Logs");
+                if (!Directory.Exists(logDir))
+                    Directory.CreateDirectory(logDir);
+
+                var logPath = Path.Combine(logDir, "search_log.txt");
+                using var writer = new StreamWriter(logPath, true);
+                writer.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}");
+            }
+            catch { }
         }
 
         public SearchResult SearchFuzzy(string query)

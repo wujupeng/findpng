@@ -1,11 +1,13 @@
 using OpenCvSharp;
 using Sdcb.PaddleOCR;
+using Sdcb.PaddleOCR.Models.Local;
+using Sdcb.PaddleInference;
 using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace ImageSearch.Services
 {
@@ -23,24 +25,136 @@ namespace ImageSearch.Services
             {
                 if (_isInitialized) return;
 
+                // 优先从程序目录加载本地模型
+                if (TryLoadLocalModel())
+                {
+                    _isInitialized = true;
+                    return;
+                }
+
+                // 尝试自动下载模型到程序目录
+                if (TryDownloadModel())
+                {
+                    if (TryLoadLocalModel())
+                    {
+                        _isInitialized = true;
+                        return;
+                    }
+                }
+
                 try
                 {
-                    _ocr = new PaddleOcrAll(
-                        PaddleOcrModels.Local.EnglishV3,
-                        enable_mkldnn: true,
-                        cpuThreadNum: Math.Max(1, Environment.ProcessorCount / 2)
-                    );
+                    // 使用默认的在线下载模型
+                    _ocr = new PaddleOcrAll(LocalFullModels.ChineseV3);
                     _isInitialized = true;
                 }
                 catch (Exception)
                 {
-                    _ocr = new PaddleOcrAll(
-                        PaddleOcrModels.Local.EnglishV3,
-                        enable_mkldnn: false,
-                        cpuThreadNum: Math.Max(1, Environment.ProcessorCount / 2)
-                    );
-                    _isInitialized = true;
+                    try
+                    {
+                        _ocr = new PaddleOcrAll(LocalFullModels.EnglishV3);
+                        _isInitialized = true;
+                    }
+                    catch (Exception)
+                    {
+                        _isInitialized = false;
+                    }
                 }
+            }
+        }
+
+        private bool TryLoadLocalModel()
+        {
+            try
+            {
+                string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+                string modelDir = Path.Combine(exeDir, "OcrModels");
+
+                string detPath = Path.Combine(modelDir, "ch_PP-OCRv3_det_infer", "inference.pdmodel");
+                string recPath = Path.Combine(modelDir, "ch_PP-OCRv3_rec_infer", "inference.pdmodel");
+                string clsPath = Path.Combine(modelDir, "ch_ppocr_mobile_v2.0_cls_infer", "inference.pdmodel");
+
+                if (File.Exists(detPath) && File.Exists(recPath) && File.Exists(clsPath))
+                {
+                    LogOcrAttempt($"Loading local model from: {modelDir}");
+                    
+                    // 使用LocalFullModels.ChineseV3，它会自动从OcrModels目录加载
+                    _ocr = new PaddleOcrAll(LocalFullModels.ChineseV3, PaddleDevice.Mkldnn());
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogOcrAttempt($"Failed to load local model: {ex.Message}");
+            }
+            return false;
+        }
+
+        private bool TryDownloadModel()
+        {
+            try
+            {
+                string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+                string modelDir = Path.Combine(exeDir, "OcrModels");
+                
+                if (!Directory.Exists(modelDir))
+                    Directory.CreateDirectory(modelDir);
+
+                LogOcrAttempt("Downloading OCR models from Baidu Cloud...");
+
+                // 使用百度云国内镜像地址下载模型
+                DownloadAndExtract("https://paddleocr.bj.bcebos.com/PP-OCRv3/chinese/ch_PP-OCRv3_det_infer.tar", modelDir);
+                DownloadAndExtract("https://paddleocr.bj.bcebos.com/PP-OCRv3/chinese/ch_PP-OCRv3_rec_infer.tar", modelDir);
+                DownloadAndExtract("https://paddleocr.bj.bcebos.com/dygraph_v2.0/ch/ch_ppocr_mobile_v2.0_cls_infer.tar", modelDir);
+
+                LogOcrAttempt("OCR models downloaded successfully");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogOcrAttempt($"Failed to download models: {ex.Message}");
+                return false;
+            }
+        }
+
+        private void DownloadAndExtract(string url, string targetDir)
+        {
+            // 使用代理配置
+            var proxy = new WebProxy("127.0.0.1", 10808);
+            var handler = new HttpClientHandler { Proxy = proxy, UseProxy = true };
+
+            using (var client = new HttpClient(handler))
+            {
+                string fileName = Path.GetFileName(url);
+                string tempPath = Path.Combine(Path.GetTempPath(), fileName);
+
+                LogOcrAttempt($"Downloading {fileName} via proxy 127.0.0.1:10808...");
+
+                // 下载文件
+                using (var stream = client.GetStreamAsync(url).Result)
+                {
+                    using (var fileStream = new FileStream(tempPath, FileMode.Create))
+                    {
+                        stream.CopyTo(fileStream);
+                    }
+                }
+
+                LogOcrAttempt($"Extracting {fileName}...");
+
+                // 使用PowerShell解压tar文件
+                var psi = new System.Diagnostics.ProcessStartInfo();
+                psi.FileName = "powershell.exe";
+                psi.Arguments = $"-Command \"tar -xf '{tempPath}' -C '{targetDir}'\"";
+                psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                psi.UseShellExecute = false;
+                psi.CreateNoWindow = true;
+
+                using (var process = System.Diagnostics.Process.Start(psi))
+                {
+                    process?.WaitForExit();
+                }
+
+                File.Delete(tempPath);
             }
         }
 
@@ -54,24 +168,41 @@ namespace ImageSearch.Services
             if (_ocr == null)
                 return string.Empty;
 
-            // 使用 using 语句确保所有资源都被正确释放
             using var originalMat = Cv2.ImRead(imagePath, ImreadModes.Color);
             
             if (originalMat.Empty())
                 return string.Empty;
 
+            // 记录日志
+            LogOcrAttempt(imagePath);
+
             try
             {
+                var results = new System.Collections.Generic.List<string>();
+                
+                // 方式1：原始图像直接识别
+                var result1 = _ocr.Run(originalMat);
+                results.Add(CleanOcrResult(result1));
+
+                // 方式2：灰度处理
                 using var grayMat = new Mat();
                 Cv2.CvtColor(originalMat, grayMat, ColorConversionCodes.BGR2GRAY);
+                
+                // 方式2a：直接灰度识别
+                var result2 = _ocr.Run(grayMat);
+                results.Add(CleanOcrResult(result2));
 
-                using var clahe = Cv2.CreateCLAHE(2.0, new Size(8, 8));
+                // 方式2b：对比度增强
+                using var clahe = Cv2.CreateCLAHE(2.0, new OpenCvSharp.Size(8, 8));
                 using var enhancedMat = new Mat();
                 clahe.Apply(grayMat, enhancedMat);
+                var result3 = _ocr.Run(enhancedMat);
+                results.Add(CleanOcrResult(result3));
 
+                // 方式3：自适应阈值二值化
                 using var binaryMat = new Mat();
                 Cv2.AdaptiveThreshold(
-                    enhancedMat, 
+                    grayMat, 
                     binaryMat, 
                     255, 
                     AdaptiveThresholdTypes.GaussianC, 
@@ -79,22 +210,31 @@ namespace ImageSearch.Services
                     11, 
                     2
                 );
+                var result4 = _ocr.Run(binaryMat);
+                results.Add(CleanOcrResult(result4));
 
-                using var denoisedMat = new Mat();
-                Cv2.MedianBlur(binaryMat, denoisedMat, 3);
+                // 方式4：反色处理（针对深色背景浅色文字）
+                using var invertedMat = new Mat();
+                Cv2.BitwiseNot(grayMat, invertedMat);
+                var result5 = _ocr.Run(invertedMat);
+                results.Add(CleanOcrResult(result5));
 
-                using var kernel = new Mat(3, 3, MatType.CV_32F, new float[] {
-                    -1, -1, -1,
-                    -1,  9, -1,
-                    -1, -1, -1
-                });
-                using var sharpenedMat = new Mat();
-                Cv2.Filter2D(denoisedMat, sharpenedMat, -1, kernel);
+                // 方式5：反色后的二值化
+                using var invertedBinaryMat = new Mat();
+                Cv2.AdaptiveThreshold(
+                    invertedMat, 
+                    invertedBinaryMat, 
+                    255, 
+                    AdaptiveThresholdTypes.GaussianC, 
+                    ThresholdTypes.Binary, 
+                    11, 
+                    2
+                );
+                var result6 = _ocr.Run(invertedBinaryMat);
+                results.Add(CleanOcrResult(result6));
 
-                // 转换为Bitmap并立即使用后释放
-                using var bitmap = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(sharpenedMat);
-                var result = _ocr.Run(bitmap);
-                return CleanOcrResult(result);
+                var combinedResult = string.Join(" ", results.Where(r => !string.IsNullOrEmpty(r)).Distinct());
+                return combinedResult;
             }
             catch (Exception)
             {
@@ -104,17 +244,32 @@ namespace ImageSearch.Services
 
         private string CleanOcrResult(PaddleOcrResult result)
         {
-            if (result == null || result.RecognizedTexts == null)
+            if (result == null)
                 return string.Empty;
 
             var allowedChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
             
-            var cleanedTexts = result.RecognizedTexts
-                .Select(block => new string(block.Text.Where(c => allowedChars.Contains(c)).ToArray()))
-                .Where(text => !string.IsNullOrWhiteSpace(text))
-                .ToList();
+            var text = result.Text;
+            if (string.IsNullOrEmpty(text))
+                return string.Empty;
 
-            return string.Join(" ", cleanedTexts);
+            var cleaned = new string(text.Where(c => allowedChars.Contains(c)).ToArray());
+            return cleaned;
+        }
+
+        private void LogOcrAttempt(string imagePath)
+        {
+            try
+            {
+                var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ImageSearch", "Logs");
+                if (!Directory.Exists(logDir))
+                    Directory.CreateDirectory(logDir);
+
+                var logPath = Path.Combine(logDir, "ocr_log.txt");
+                using var writer = new StreamWriter(logPath, true);
+                writer.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - OCR attempt: {Path.GetFileName(imagePath)}");
+            }
+            catch { }
         }
 
         public void Dispose()

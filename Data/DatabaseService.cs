@@ -19,6 +19,60 @@ namespace ImageSearch.Data
             InitializeDatabase();
         }
 
+        private void MigrateOldDatabase(SqliteConnection connection)
+        {
+            // 强制删除旧的FTS表和触发器，确保使用正确的列名 ocr_text
+            using var transaction = connection.BeginTransaction();
+            
+            try
+            {
+                // 删除旧的FTS表
+                using var dropFtsCmd = connection.CreateCommand();
+                dropFtsCmd.CommandText = "DROP TABLE IF EXISTS image_fts;";
+                dropFtsCmd.ExecuteNonQuery();
+                
+                // 删除旧的触发器
+                using var dropTriggerCmd = connection.CreateCommand();
+                dropTriggerCmd.CommandText = @"
+                    DROP TRIGGER IF EXISTS image_fts_ai;
+                    DROP TRIGGER IF EXISTS image_fts_ad;
+                    DROP TRIGGER IF EXISTS image_fts_au;";
+                dropTriggerCmd.ExecuteNonQuery();
+                
+                transaction.Commit();
+            }
+            catch (Exception)
+            {
+                // 表可能不存在，忽略
+            }
+            
+            // 检查主表是否存在使用 raw_text 列的旧结构
+            using var checkColumnCmd = connection.CreateCommand();
+            checkColumnCmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('image_index') WHERE name = 'raw_text';";
+            
+            try
+            {
+                var count = (long)checkColumnCmd.ExecuteScalar();
+                if (count > 0)
+                {
+                    // 存在旧结构，需要迁移
+                    using var trans = connection.BeginTransaction();
+                    
+                    // 重命名旧表
+                    using var renameCmd = connection.CreateCommand();
+                    renameCmd.CommandText = "ALTER TABLE image_index RENAME TO image_index_old;";
+                    renameCmd.ExecuteNonQuery();
+                    
+                    trans.Commit();
+                }
+            }
+            catch (Exception)
+            {
+                // 表可能不存在，忽略
+            }
+        }
+
         private void InitializeDatabase()
         {
             var directory = Path.GetDirectoryName(_dbPath);
@@ -29,6 +83,9 @@ namespace ImageSearch.Data
 
             using var connection = new SqliteConnection($"Data Source={_dbPath}");
             connection.Open();
+
+            // 检查是否存在旧的数据库结构（使用 raw_text 列）
+            MigrateOldDatabase(connection);
 
             // 创建主表
             using var createTableCmd = connection.CreateCommand();

@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="图片内容检索系统" Height="800" Width="1200"
+        Title="HTKIS图片内容检索系统" Height="800" Width="1200"
         WindowStartupLocation="CenterScreen">
     <Grid>
         <Grid.RowDefinitions>
@@ -25,7 +25,7 @@
                 </Grid.ColumnDefinitions>
                 
                 <TextBox Grid.Column="0" x:Name="SearchBox" Style="{StaticResource SearchTextBox}"
-                         PlaceholderText="输入要搜索的文本（如：B260114S5028）"
+                         ToolTip="输入要搜索的文本（如：B260114S5028）"
                          KeyDown="SearchBox_KeyDown"/>
                 
                 <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" 

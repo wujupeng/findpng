@@ -4,6 +4,7 @@ using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
@@ -25,6 +26,7 @@ namespace ImageSearch
             var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ImageSearch");
             _dbService = new DatabaseService(appDataPath);
             _ocrService = new OcrService();
+            _ocrService.Initialize();
             _scannerService = new ImageScannerService(_dbService, _ocrService);
             _searchService = new SearchService(_dbService);
 
@@ -32,6 +34,27 @@ namespace ImageSearch
             _scannerService.ScanCompleted += ScannerService_ScanCompleted;
 
             UpdateIndexedCount();
+            
+            LoadWindowIcon();
+        }
+        
+        private void LoadWindowIcon()
+        {
+            try
+            {
+                string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+                string iconPath = Path.Combine(exeDir, "Htkis.ico");
+                
+                if (File.Exists(iconPath))
+                {
+                    var icon = new BitmapImage(new Uri(iconPath));
+                    this.Icon = icon;
+                }
+            }
+            catch
+            {
+                // 忽略图标加载错误，不影响程序运行
+            }
         }
 
         private void UpdateIndexedCount()
@@ -168,18 +191,21 @@ namespace ImageSearch
             stackPanel.Children.Add(fileName);
             border.Child = stackPanel;
 
-            border.MouseDoubleClick += (sender, e) =>
+            border.MouseDown += (sender, e) =>
             {
-                try
+                if (e.ClickCount == 2)
                 {
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    try
                     {
-                        FileName = filePath,
-                        UseShellExecute = true
-                    });
-                }
-                catch (Exception)
-                {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = filePath,
+                            UseShellExecute = true
+                        });
+                    }
+                    catch (Exception)
+                    {
+                    }
                 }
             };
 
