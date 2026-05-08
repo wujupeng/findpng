@@ -254,7 +254,83 @@ namespace ImageSearch.Services
                 return string.Empty;
 
             var cleaned = new string(text.Where(c => allowedChars.Contains(c)).ToArray());
+            
+            // 字符纠正：处理OCR识别时常见的字符混淆
+            cleaned = CorrectOcrCharacters(cleaned);
+            
             return cleaned;
+        }
+        
+        private string CorrectOcrCharacters(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return text;
+            
+            // OCR常见字符混淆纠正映射
+            // 数字类混淆
+            text = text.Replace('q', '9')    // q → 9
+                       .Replace('Q', '9')    // Q → 9
+                       .Replace('g', '9')    // g → 9
+                       .Replace('G', '6')    // G → 6
+                       .Replace('b', '6')    // b → 6
+                       .Replace('B', '8')    // B → 8
+                       .Replace('D', '0')    // D → 0
+                       .Replace('O', '0')    // O → 0
+                       .Replace('o', '0')    // o → 0
+                       .Replace('I', '1')    // I → 1
+                       .Replace('l', '1')    // l → 1
+                       .Replace('|', '1')    // | → 1
+                       .Replace('S', '5')    // S → 5
+                       .Replace('s', '5')    // s → 5
+                       .Replace('Z', '2')    // Z → 2
+                       .Replace('z', '2');   // z → 2
+            
+            // 工业条码特殊纠正：尾部数字码常见错误
+            // 9和6在条码中容易混淆，根据上下文进行智能纠正
+            char[] chars = text.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+            {
+                // 如果当前字符是9，检查前后是否有数字模式表明应该是6
+                if (chars[i] == '9')
+                {
+                    // 检查是否在尾部数字码位置（通常是最后几位数字）
+                    int distanceFromEnd = chars.Length - i;
+                    if (distanceFromEnd <= 6 && distanceFromEnd >= 1)
+                    {
+                        // 检查前后是否有数字特征表明应该是6
+                        bool shouldBeSix = false;
+                        
+                        // 检查前一个字符
+                        if (i > 0 && char.IsDigit(chars[i - 1]))
+                        {
+                            int prevDigit = chars[i - 1] - '0';
+                            // 如果前一个数字是5或6，当前更可能是6
+                            if (prevDigit == 5 || prevDigit == 6)
+                            {
+                                shouldBeSix = true;
+                            }
+                        }
+                        
+                        // 检查后一个字符
+                        if (!shouldBeSix && i < chars.Length - 1 && char.IsDigit(chars[i + 1]))
+                        {
+                            int nextDigit = chars[i + 1] - '0';
+                            // 如果后一个数字是5或6，当前更可能是6
+                            if (nextDigit == 5 || nextDigit == 6)
+                            {
+                                shouldBeSix = true;
+                            }
+                        }
+                        
+                        if (shouldBeSix)
+                        {
+                            chars[i] = '6';
+                        }
+                    }
+                }
+            }
+            
+            return new string(chars);
         }
 
         private void LogOcrAttempt(string imagePath)

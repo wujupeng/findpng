@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace ImageSearch.Services
 {
@@ -36,6 +37,11 @@ namespace ImageSearch.Services
                 if (fuzzyResults.Count > 0)
                 {
                     results.AddRange(fuzzyResults);
+                    // 记录实际返回的文件路径
+                    foreach (var path in fuzzyResults.Take(3)) // 最多记录3个
+                    {
+                        LogSearchAttempt($"  - Path: {path}, Exists: {File.Exists(path)}");
+                    }
                 }
                 else
                 {
@@ -52,6 +58,7 @@ namespace ImageSearch.Services
                 results.AddRange(_dbService.SearchByFuzzyLike(query));
             }
 
+            LogSearchAttempt($"Final results count: {results.Count}");
             stopwatch.Stop();
 
             return new SearchResult(results, stopwatch.ElapsedMilliseconds);

@@ -94,10 +94,14 @@ namespace ImageSearch
             {
                 var result = _searchService.Search(query);
                 
-                DisplayResults(result.FilePaths);
-                SearchTime.Text = $"{result.SearchTimeMs}ms";
-                ResultCount.Text = result.FilePaths.Count.ToString();
-                StatusText.Text = "搜索完成";
+                // 确保在UI线程上更新界面
+                Dispatcher.Invoke(() =>
+                {
+                    DisplayResults(result.FilePaths);
+                    SearchTime.Text = $"{result.SearchTimeMs}ms";
+                    ResultCount.Text = result.FilePaths.Count.ToString();
+                    StatusText.Text = "搜索完成";
+                });
             }
             catch (Exception ex)
             {
@@ -108,9 +112,15 @@ namespace ImageSearch
         private void DisplayResults(List<string> filePaths)
         {
             ResultPanel.Children.Clear();
+            
+            LogDisplayAttempt($"DisplayResults called with {filePaths.Count} files");
+
+            // 确保ResultCount在UI线程上更新
+            ResultCount.Text = filePaths.Count.ToString();
 
             if (filePaths.Count == 0)
             {
+                LogDisplayAttempt("No results to display");
                 var noResultText = new TextBlock
                 {
                     Text = "未找到匹配的图片",
@@ -122,17 +132,38 @@ namespace ImageSearch
                 return;
             }
 
+            int addedCount = 0;
             foreach (var filePath in filePaths)
             {
                 try
                 {
+                    LogDisplayAttempt($"Creating card for: {filePath}, Exists: {File.Exists(filePath)}");
                     var imageCard = CreateImageCard(filePath);
                     ResultPanel.Children.Add(imageCard);
+                    addedCount++;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    LogDisplayAttempt($"Failed to create card for {filePath}: {ex.Message}");
                 }
             }
+            LogDisplayAttempt($"Added {addedCount} cards to ResultPanel");
+            LogDisplayAttempt($"ResultCount updated to: {ResultCount.Text}");
+        }
+        
+        private void LogDisplayAttempt(string message)
+        {
+            try
+            {
+                var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ImageSearch", "Logs");
+                if (!Directory.Exists(logDir))
+                    Directory.CreateDirectory(logDir);
+
+                var logPath = Path.Combine(logDir, "display_log.txt");
+                using var writer = new StreamWriter(logPath, true);
+                writer.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}");
+            }
+            catch { }
         }
 
         private Border CreateImageCard(string filePath)

@@ -1,0 +1,320 @@
+2026-05-07 23:15:44 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-07 23:15:44 -   - img_5120x5120x24_016625.jpg
+2026-05-07 23:15:44 -   - img_5120x5120x24_016626.jpg
+2026-05-07 23:15:44 -   - img_5120x5120x24_016627.jpg
+2026-05-07 23:15:44 -   - img_5120x5120x24_016628.jpg
+2026-05-07 23:15:44 -   - img_5120x5120x24_016629.jpg
+2026-05-07 23:15:44 - Processing: img_5120x5120x24_016628.jpg
+2026-05-07 23:15:44 - Processing: img_5120x5120x24_016627.jpg
+2026-05-07 23:15:44 -   - Running OCR...
+2026-05-07 23:15:44 -   - Running OCR...
+2026-05-07 23:15:44 -   - Running OCR...
+2026-05-07 23:15:44 -   - Running OCR...
+2026-05-07 23:15:45 - Processing: img_5120x5120x24_016629.jpg
+2026-05-07 23:15:45 -   - Running OCR...
+2026-05-07 23:15:45 - Processing: img_5120x5120x24_016630.jpg
+2026-05-07 23:15:45 -   - Running OCR...
+2026-05-07 23:15:46 - Processing: img_5120x5120x24_016631.jpg
+2026-05-07 23:15:46 -   - Running OCR...
+2026-05-07 23:15:46 - Processing: img_5120x5120x24_016632.jpg
+2026-05-07 23:15:46 -   - Running OCR...
+2026-05-07 23:15:46 - Processing: img_5120x5120x24_016633.jpg
+2026-05-07 23:15:46 -   - Running OCR...
+2026-05-07 23:15:47 - Processing: img_5120x5120x24_016634.jpg
+2026-05-07 23:15:47 -   - Running OCR...
+2026-05-07 23:15:49 -   - OCR Result: 78027000130B261434S5593PERMANENTMARKERdeli02880OW6...
+2026-05-07 23:15:55 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-07 23:15:55 -   - img_5120x5120x24_016625.jpg
+2026-05-07 23:15:55 -   - img_5120x5120x24_016626.jpg
+2026-05-07 23:15:55 -   - img_5120x5120x24_016627.jpg
+2026-05-07 23:15:55 -   - img_5120x5120x24_016628.jpg
+2026-05-07 23:15:55 -   - img_5120x5120x24_016629.jpg
+2026-05-07 23:15:55 - Processing: img_5120x5120x24_016628.jpg
+2026-05-07 23:15:55 -   - Running OCR...
+2026-05-07 23:15:55 -   - Skipped: MD5 exists in database
+2026-05-07 23:15:55 - Processing: img_5120x5120x24_016627.jpg
+2026-05-07 23:15:55 -   - Running OCR...
+2026-05-07 23:15:55 - Processing: img_5120x5120x24_016626.jpg
+2026-05-07 23:15:55 -   - Running OCR...
+2026-05-07 23:15:55 - Processing: img_5120x5120x24_016629.jpg
+2026-05-07 23:15:55 -   - Running OCR...
+2026-05-07 23:15:56 - Processing: img_5120x5120x24_016630.jpg
+2026-05-07 23:15:56 -   - Running OCR...
+2026-05-07 23:15:56 - Processing: img_5120x5120x24_016631.jpg
+2026-05-07 23:15:56 -   - Running OCR...
+2026-05-07 23:15:57 - Processing: img_5120x5120x24_016632.jpg
+2026-05-07 23:15:57 -   - Running OCR...
+2026-05-07 23:15:57 - Processing: img_5120x5120x24_016633.jpg
+2026-05-07 23:15:57 -   - Running OCR...
+2026-05-07 23:15:57 - Processing: img_5120x5120x24_016634.jpg
+2026-05-07 23:15:57 -   - Running OCR...
+2026-05-07 23:16:09 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-07 23:16:09 -   - img_5120x5120x24_016625.jpg
+2026-05-07 23:16:09 -   - img_5120x5120x24_016626.jpg
+2026-05-07 23:16:09 -   - img_5120x5120x24_016627.jpg
+2026-05-07 23:16:09 -   - img_5120x5120x24_016628.jpg
+2026-05-07 23:16:09 -   - img_5120x5120x24_016629.jpg
+2026-05-07 23:16:09 - Processing: img_5120x5120x24_016625.jpg
+2026-05-07 23:16:09 -   - Running OCR...
+2026-05-07 23:16:09 - Processing: img_5120x5120x24_016628.jpg
+2026-05-07 23:16:09 -   - Skipped: MD5 exists in database
+2026-05-07 23:16:09 - Processing: img_5120x5120x24_016627.jpg
+2026-05-07 23:16:09 - Processing: img_5120x5120x24_016626.jpg
+2026-05-07 23:16:09 -   - Running OCR...
+2026-05-07 23:16:09 - Processing: img_5120x5120x24_016629.jpg
+2026-05-07 23:16:09 -   - Running OCR...
+2026-05-07 23:16:09 - Processing: img_5120x5120x24_016630.jpg
+2026-05-07 23:16:09 -   - Running OCR...
+2026-05-07 23:16:10 - Processing: img_5120x5120x24_016631.jpg
+2026-05-07 23:16:10 -   - Running OCR...
+2026-05-07 23:16:10 - Processing: img_5120x5120x24_016632.jpg
+2026-05-07 23:16:10 -   - Running OCR...
+2026-05-07 23:16:11 - Processing: img_5120x5120x24_016633.jpg
+2026-05-07 23:16:11 -   - Running OCR...
+2026-05-07 23:16:11 - Processing: img_5120x5120x24_016634.jpg
+2026-05-07 23:16:11 -   - Running OCR...
+2026-05-07 23:16:15 -   - OCR Result: 78027000130B261744S6277OOVAOZO000B3604230234016508...
+2026-05-07 23:16:23 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-07 23:16:23 -   - img_5120x5120x24_016625.jpg
+2026-05-07 23:16:23 -   - img_5120x5120x24_016626.jpg
+2026-05-07 23:16:23 -   - img_5120x5120x24_016627.jpg
+2026-05-07 23:16:23 -   - img_5120x5120x24_016628.jpg
+2026-05-07 23:16:23 -   - img_5120x5120x24_016629.jpg
+2026-05-07 23:16:23 - Processing: img_5120x5120x24_016626.jpg
+2026-05-07 23:16:23 -   - Running OCR...
+2026-05-07 23:16:23 - Processing: img_5120x5120x24_016628.jpg
+2026-05-07 23:16:23 -   - Skipped: MD5 exists in database
+2026-05-07 23:16:23 - Processing: img_5120x5120x24_016625.jpg
+2026-05-07 23:16:23 -   - Running OCR...
+2026-05-07 23:16:23 - Processing: img_5120x5120x24_016629.jpg
+2026-05-07 23:16:23 -   - Running OCR...
+2026-05-07 23:16:23 - Processing: img_5120x5120x24_016630.jpg
+2026-05-07 23:16:23 -   - Running OCR...
+2026-05-07 23:16:23 - Processing: img_5120x5120x24_016631.jpg
+2026-05-07 23:16:23 -   - Running OCR...
+2026-05-07 23:16:24 - Processing: img_5120x5120x24_016632.jpg
+2026-05-07 23:16:24 -   - Skipped: MD5 exists in database
+2026-05-07 23:16:24 - Processing: img_5120x5120x24_016633.jpg
+2026-05-07 23:16:24 -   - Running OCR...
+2026-05-07 23:16:24 - Processing: img_5120x5120x24_016634.jpg
+2026-05-07 23:16:24 -   - Running OCR...
+2026-05-08 07:44:45 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-08 07:44:45 -   - img_5120x5120x24_016625.jpg
+2026-05-08 07:44:45 -   - img_5120x5120x24_016626.jpg
+2026-05-08 07:44:45 -   - img_5120x5120x24_016627.jpg
+2026-05-08 07:44:45 -   - img_5120x5120x24_016628.jpg
+2026-05-08 07:44:45 -   - img_5120x5120x24_016629.jpg
+2026-05-08 07:44:46 - Processing: img_5120x5120x24_016628.jpg
+2026-05-08 07:44:46 - Processing: img_5120x5120x24_016627.jpg
+2026-05-08 07:44:46 - Processing: img_5120x5120x24_016626.jpg
+2026-05-08 07:44:46 -   - Skipped: MD5 exists in database
+2026-05-08 07:44:46 -   - Running OCR...
+2026-05-08 07:44:46 -   - Running OCR...
+2026-05-08 07:44:46 - Processing: img_5120x5120x24_016629.jpg
+2026-05-08 07:44:46 -   - Running OCR...
+2026-05-08 07:44:47 - Processing: img_5120x5120x24_016630.jpg
+2026-05-08 07:44:47 -   - Running OCR...
+2026-05-08 07:44:47 - Processing: img_5120x5120x24_016631.jpg
+2026-05-08 07:44:47 -   - Running OCR...
+2026-05-08 07:44:47 - Processing: img_5120x5120x24_016632.jpg
+2026-05-08 07:44:47 -   - Skipped: MD5 exists in database
+2026-05-08 07:44:47 - Processing: img_5120x5120x24_016633.jpg
+2026-05-08 07:44:47 -   - Running OCR...
+2026-05-08 07:44:48 - Processing: img_5120x5120x24_016634.jpg
+2026-05-08 07:44:48 -   - Running OCR...
+2026-05-08 07:44:51 -   - OCR Result: 78027000130B261434S5565PERMANENTMARKERdeLi2880S100...
+2026-05-08 07:45:00 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-08 07:45:00 -   - img_5120x5120x24_016625.jpg
+2026-05-08 07:45:00 -   - img_5120x5120x24_016626.jpg
+2026-05-08 07:45:00 -   - img_5120x5120x24_016627.jpg
+2026-05-08 07:45:00 -   - img_5120x5120x24_016628.jpg
+2026-05-08 07:45:00 -   - img_5120x5120x24_016629.jpg
+2026-05-08 07:45:00 - Processing: img_5120x5120x24_016625.jpg
+2026-05-08 07:45:00 - Processing: img_5120x5120x24_016627.jpg
+2026-05-08 07:45:00 -   - Skipped: MD5 exists in database
+2026-05-08 07:45:00 - Processing: img_5120x5120x24_016626.jpg
+2026-05-08 07:45:00 -   - Skipped: MD5 exists in database
+2026-05-08 07:45:00 -   - Running OCR...
+2026-05-08 07:45:00 - Processing: img_5120x5120x24_016629.jpg
+2026-05-08 07:45:00 -   - Running OCR...
+2026-05-08 07:45:00 - Processing: img_5120x5120x24_016630.jpg
+2026-05-08 07:45:00 -   - Running OCR...
+2026-05-08 07:45:01 - Processing: img_5120x5120x24_016631.jpg
+2026-05-08 07:45:01 -   - Running OCR...
+2026-05-08 07:45:01 - Processing: img_5120x5120x24_016632.jpg
+2026-05-08 07:45:01 -   - Skipped: MD5 exists in database
+2026-05-08 07:45:01 - Processing: img_5120x5120x24_016633.jpg
+2026-05-08 07:45:01 -   - Running OCR...
+2026-05-08 07:45:01 - Processing: img_5120x5120x24_016634.jpg
+2026-05-08 07:45:01 -   - Running OCR...
+2026-05-08 07:45:16 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-08 07:45:16 -   - img_5120x5120x24_016625.jpg
+2026-05-08 07:45:16 -   - img_5120x5120x24_016626.jpg
+2026-05-08 07:45:16 -   - img_5120x5120x24_016627.jpg
+2026-05-08 07:45:16 -   - img_5120x5120x24_016628.jpg
+2026-05-08 07:45:16 -   - img_5120x5120x24_016629.jpg
+2026-05-08 07:45:16 - Processing: img_5120x5120x24_016625.jpg
+2026-05-08 07:45:16 -   - Skipped: MD5 exists in database
+2026-05-08 07:45:16 - Processing: img_5120x5120x24_016627.jpg
+2026-05-08 07:45:16 - Processing: img_5120x5120x24_016628.jpg
+2026-05-08 07:45:16 - Processing: img_5120x5120x24_016626.jpg
+2026-05-08 07:45:16 -   - Skipped: MD5 exists in database
+2026-05-08 07:45:16 -   - Running OCR...
+2026-05-08 07:45:16 - Processing: img_5120x5120x24_016629.jpg
+2026-05-08 07:45:16 -   - Running OCR...
+2026-05-08 07:45:16 - Processing: img_5120x5120x24_016630.jpg
+2026-05-08 07:45:16 -   - Running OCR...
+2026-05-08 07:45:16 - Processing: img_5120x5120x24_016631.jpg
+2026-05-08 07:45:17 -   - Running OCR...
+2026-05-08 07:45:17 - Processing: img_5120x5120x24_016632.jpg
+2026-05-08 07:45:17 -   - Skipped: MD5 exists in database
+2026-05-08 07:45:17 - Processing: img_5120x5120x24_016633.jpg
+2026-05-08 07:45:17 -   - Running OCR...
+2026-05-08 07:45:17 - Processing: img_5120x5120x24_016634.jpg
+2026-05-08 07:45:17 -   - Running OCR...
+2026-05-08 07:45:21 -   - OCR Result: 78027000130B261434S5592WERMANENTMARKERdeli100801oC...
+2026-05-08 07:45:31 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-08 07:45:31 -   - img_5120x5120x24_016625.jpg
+2026-05-08 07:45:31 -   - img_5120x5120x24_016626.jpg
+2026-05-08 07:45:31 -   - img_5120x5120x24_016627.jpg
+2026-05-08 07:45:31 -   - img_5120x5120x24_016628.jpg
+2026-05-08 07:45:31 -   - img_5120x5120x24_016629.jpg
+2026-05-08 07:45:31 - Processing: img_5120x5120x24_016626.jpg
+2026-05-08 07:45:31 - Processing: img_5120x5120x24_016625.jpg
+2026-05-08 07:45:31 -   - Running OCR...
+2026-05-08 07:45:31 -   - Skipped: MD5 exists in database
+2026-05-08 07:45:31 - Processing: img_5120x5120x24_016628.jpg
+2026-05-08 07:45:31 -   - Skipped: MD5 exists in database
+2026-05-08 07:45:31 - Processing: img_5120x5120x24_016627.jpg
+2026-05-08 07:45:31 -   - Running OCR...
+2026-05-08 07:45:31 - Processing: img_5120x5120x24_016629.jpg
+2026-05-08 07:45:31 -   - Skipped: MD5 exists in database
+2026-05-08 07:45:31 - Processing: img_5120x5120x24_016630.jpg
+2026-05-08 07:45:31 -   - Running OCR...
+2026-05-08 07:45:31 - Processing: img_5120x5120x24_016631.jpg
+2026-05-08 07:45:31 -   - Running OCR...
+2026-05-08 07:45:32 - Processing: img_5120x5120x24_016632.jpg
+2026-05-08 07:45:32 -   - Skipped: MD5 exists in database
+2026-05-08 07:45:32 - Processing: img_5120x5120x24_016633.jpg
+2026-05-08 07:45:32 -   - Running OCR...
+2026-05-08 07:45:32 - Processing: img_5120x5120x24_016634.jpg
+2026-05-08 07:45:32 -   - Running OCR...
+2026-05-08 07:55:41 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-08 07:55:41 -   - img_5120x5120x24_016625.jpg
+2026-05-08 07:55:41 -   - img_5120x5120x24_016626.jpg
+2026-05-08 07:55:41 -   - img_5120x5120x24_016627.jpg
+2026-05-08 07:55:41 -   - img_5120x5120x24_016628.jpg
+2026-05-08 07:55:41 -   - img_5120x5120x24_016629.jpg
+2026-05-08 07:55:41 - Processing: img_5120x5120x24_016627.jpg
+2026-05-08 07:55:41 - Processing: img_5120x5120x24_016628.jpg
+2026-05-08 07:55:41 -   - Skipped: MD5 exists in database
+2026-05-08 07:55:42 -   - Skipped: MD5 exists in database
+2026-05-08 07:55:42 - Processing: img_5120x5120x24_016629.jpg
+2026-05-08 07:55:42 -   - Skipped: MD5 exists in database
+2026-05-08 07:55:42 - Processing: img_5120x5120x24_016630.jpg
+2026-05-08 07:55:42 -   - Running OCR...
+2026-05-08 07:55:42 - Processing: img_5120x5120x24_016631.jpg
+2026-05-08 07:55:42 -   - Running OCR...
+2026-05-08 07:55:43 - Processing: img_5120x5120x24_016632.jpg
+2026-05-08 07:55:43 -   - Skipped: MD5 exists in database
+2026-05-08 07:55:43 - Processing: img_5120x5120x24_016633.jpg
+2026-05-08 07:55:43 -   - Running OCR...
+2026-05-08 07:55:43 - Processing: img_5120x5120x24_016634.jpg
+2026-05-08 07:55:43 -   - Running OCR...
+2026-05-08 07:55:46 -   - OCR Result: 78027000130B261434S5596PERMANENTMARKERdeLi02880S19...
+2026-05-08 08:07:35 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-08 08:07:35 -   - img_5120x5120x24_016625.jpg
+2026-05-08 08:07:35 -   - img_5120x5120x24_016626.jpg
+2026-05-08 08:07:35 -   - img_5120x5120x24_016627.jpg
+2026-05-08 08:07:35 -   - img_5120x5120x24_016628.jpg
+2026-05-08 08:07:35 -   - img_5120x5120x24_016629.jpg
+2026-05-08 08:07:35 - Processing: img_5120x5120x24_016626.jpg
+2026-05-08 08:07:35 - Processing: img_5120x5120x24_016628.jpg
+2026-05-08 08:07:35 -   - Skipped: MD5 exists in database
+2026-05-08 08:07:35 -   - Skipped: MD5 exists in database
+2026-05-08 08:07:35 - Processing: img_5120x5120x24_016629.jpg
+2026-05-08 08:07:35 -   - Skipped: MD5 exists in database
+2026-05-08 08:07:35 - Processing: img_5120x5120x24_016630.jpg
+2026-05-08 08:07:35 -   - Running OCR...
+2026-05-08 08:07:35 - Processing: img_5120x5120x24_016631.jpg
+2026-05-08 08:07:35 -   - Running OCR...
+2026-05-08 08:07:35 - Processing: img_5120x5120x24_016632.jpg
+2026-05-08 08:07:35 -   - Skipped: MD5 exists in database
+2026-05-08 08:07:35 - Processing: img_5120x5120x24_016633.jpg
+2026-05-08 08:07:35 -   - Running OCR...
+2026-05-08 08:07:36 - Processing: img_5120x5120x24_016634.jpg
+2026-05-08 08:07:36 -   - Running OCR...
+2026-05-08 08:07:40 -   - OCR Result: 78027000130B261434S5598WERMANENTMARKERdeli10288001...
+2026-05-08 08:08:10 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-08 08:08:10 -   - img_5120x5120x24_016625.jpg
+2026-05-08 08:08:10 -   - img_5120x5120x24_016626.jpg
+2026-05-08 08:08:10 -   - img_5120x5120x24_016627.jpg
+2026-05-08 08:08:10 -   - img_5120x5120x24_016628.jpg
+2026-05-08 08:08:10 -   - img_5120x5120x24_016629.jpg
+2026-05-08 08:08:10 - Processing: img_5120x5120x24_016625.jpg
+2026-05-08 08:08:10 - Processing: img_5120x5120x24_016626.jpg
+2026-05-08 08:08:10 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:10 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:10 - Processing: img_5120x5120x24_016628.jpg
+2026-05-08 08:08:10 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:10 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:10 - Processing: img_5120x5120x24_016629.jpg
+2026-05-08 08:08:10 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:10 - Processing: img_5120x5120x24_016630.jpg
+2026-05-08 08:08:10 -   - Running OCR...
+2026-05-08 08:08:10 - Processing: img_5120x5120x24_016631.jpg
+2026-05-08 08:08:10 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:10 -   - Running OCR...
+2026-05-08 08:08:10 - Processing: img_5120x5120x24_016633.jpg
+2026-05-08 08:08:10 -   - Running OCR...
+2026-05-08 08:08:10 - Processing: img_5120x5120x24_016634.jpg
+2026-05-08 08:08:10 -   - Running OCR...
+2026-05-08 08:08:14 -   - OCR Result: 78027000130B261434S5597PERMANENTMARKERdeli088001SC...
+2026-05-08 08:08:23 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-08 08:08:23 -   - img_5120x5120x24_016625.jpg
+2026-05-08 08:08:23 -   - img_5120x5120x24_016626.jpg
+2026-05-08 08:08:23 -   - img_5120x5120x24_016627.jpg
+2026-05-08 08:08:23 -   - img_5120x5120x24_016628.jpg
+2026-05-08 08:08:23 -   - img_5120x5120x24_016629.jpg
+2026-05-08 08:08:23 - Processing: img_5120x5120x24_016625.jpg
+2026-05-08 08:08:23 - Processing: img_5120x5120x24_016627.jpg
+2026-05-08 08:08:23 - Processing: img_5120x5120x24_016628.jpg
+2026-05-08 08:08:23 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:23 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:23 - Processing: img_5120x5120x24_016629.jpg
+2026-05-08 08:08:23 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:23 - Processing: img_5120x5120x24_016631.jpg
+2026-05-08 08:08:23 -   - Running OCR...
+2026-05-08 08:08:23 - Processing: img_5120x5120x24_016632.jpg
+2026-05-08 08:08:23 - Processing: img_5120x5120x24_016630.jpg
+2026-05-08 08:08:23 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:23 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:23 - Processing: img_5120x5120x24_016633.jpg
+2026-05-08 08:08:23 -   - Running OCR...
+2026-05-08 08:08:23 - Processing: img_5120x5120x24_016634.jpg
+2026-05-08 08:08:23 -   - Running OCR...
+2026-05-08 08:08:40 - Found 10 images in C:\Users\DELL\Desktop\新建文件夹(1)
+2026-05-08 08:08:40 -   - img_5120x5120x24_016625.jpg
+2026-05-08 08:08:40 -   - img_5120x5120x24_016626.jpg
+2026-05-08 08:08:40 -   - img_5120x5120x24_016627.jpg
+2026-05-08 08:08:40 -   - img_5120x5120x24_016628.jpg
+2026-05-08 08:08:40 -   - img_5120x5120x24_016629.jpg
+2026-05-08 08:08:40 - Processing: img_5120x5120x24_016627.jpg
+2026-05-08 08:08:40 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:40 - Processing: img_5120x5120x24_016628.jpg
+2026-05-08 08:08:40 - Processing: img_5120x5120x24_016626.jpg
+2026-05-08 08:08:40 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:40 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:40 - Processing: img_5120x5120x24_016629.jpg
+2026-05-08 08:08:40 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:40 - Processing: img_5120x5120x24_016631.jpg
+2026-05-08 08:08:40 -   - Running OCR...
+2026-05-08 08:08:40 - Processing: img_5120x5120x24_016630.jpg
+2026-05-08 08:08:40 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:40 - Processing: img_5120x5120x24_016632.jpg
+2026-05-08 08:08:40 -   - Skipped: MD5 exists in database
+2026-05-08 08:08:40 - Processing: img_5120x5120x24_016633.jpg
+2026-05-08 08:08:40 -   - Running OCR...
+2026-05-08 08:08:40 - Processing: img_5120x5120x24_016634.jpg
+2026-05-08 08:08:40 -   - Running OCR...
+2026-05-08 08:08:44 -   - OCR Result: 78027000130B261434S5760600C00E02880S15961890 78027...
