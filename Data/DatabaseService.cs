@@ -8,31 +8,42 @@ using System.Threading.Tasks;
 
 namespace ImageSearch.Data
 {
-    public class DatabaseService
+    public class DatabaseService : IDisposable
     {
         private readonly string _dbPath;
         private const string DbFileName = "image_index.db";
+        private readonly SqliteConnection _sharedConnection;
 
         public DatabaseService(string appDataPath)
         {
             _dbPath = Path.Combine(appDataPath, DbFileName);
+            
+            // 使用连接字符串开启WAL模式，大幅提升并发写入性能
+            _sharedConnection = new SqliteConnection(
+                $"Data Source={_dbPath};Mode=ReadWriteCreate;Cache=Shared;");
+            _sharedConnection.Open();
+            EnableWalMode();
             InitializeDatabase();
         }
 
-        private void MigrateOldDatabase(SqliteConnection connection)
+        private void EnableWalMode()
         {
-            // 强制删除旧的FTS表和触发器，确保使用正确的列名 ocr_text
-            using var transaction = connection.BeginTransaction();
+            using var cmd = _sharedConnection.CreateCommand();
+            cmd.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;";
+            cmd.ExecuteNonQuery();
+        }
+
+        private void MigrateOldDatabase()
+        {
+            using var transaction = _sharedConnection.BeginTransaction();
             
             try
             {
-                // 删除旧的FTS表
-                using var dropFtsCmd = connection.CreateCommand();
+                using var dropFtsCmd = _sharedConnection.CreateCommand();
                 dropFtsCmd.CommandText = "DROP TABLE IF EXISTS image_fts;";
                 dropFtsCmd.ExecuteNonQuery();
                 
-                // 删除旧的触发器
-                using var dropTriggerCmd = connection.CreateCommand();
+                using var dropTriggerCmd = _sharedConnection.CreateCommand();
                 dropTriggerCmd.CommandText = @"
                     DROP TRIGGER IF EXISTS image_fts_ai;
                     DROP TRIGGER IF EXISTS image_fts_ad;
@@ -46,8 +57,7 @@ namespace ImageSearch.Data
                 // 表可能不存在，忽略
             }
             
-            // 检查主表是否存在使用 raw_text 列的旧结构
-            using var checkColumnCmd = connection.CreateCommand();
+            using var checkColumnCmd = _sharedConnection.CreateCommand();
             checkColumnCmd.CommandText = @"
                 SELECT COUNT(*) FROM pragma_table_info('image_index') WHERE name = 'raw_text';";
             
@@ -56,11 +66,9 @@ namespace ImageSearch.Data
                 var count = (long)checkColumnCmd.ExecuteScalar();
                 if (count > 0)
                 {
-                    // 存在旧结构，需要迁移
-                    using var trans = connection.BeginTransaction();
+                    using var trans = _sharedConnection.BeginTransaction();
                     
-                    // 重命名旧表
-                    using var renameCmd = connection.CreateCommand();
+                    using var renameCmd = _sharedConnection.CreateCommand();
                     renameCmd.CommandText = "ALTER TABLE image_index RENAME TO image_index_old;";
                     renameCmd.ExecuteNonQuery();
                     
@@ -81,70 +89,100 @@ namespace ImageSearch.Data
                 Directory.CreateDirectory(directory);
             }
 
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
+            MigrateOldDatabase();
 
-            // 检查是否存在旧的数据库结构（使用 raw_text 列）
-            MigrateOldDatabase(connection);
-
-            // 创建主表
-            using var createTableCmd = connection.CreateCommand();
+            // 先创建或更新主表
+            using var createTableCmd = _sharedConnection.CreateCommand();
             createTableCmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS image_index (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     file_path TEXT UNIQUE NOT NULL,
                     ocr_text TEXT NOT NULL,
+                    tail_code TEXT DEFAULT '',
                     md5 TEXT NOT NULL,
                     create_time DATETIME NOT NULL,
                     last_modified DATETIME NOT NULL
                 );";
             createTableCmd.ExecuteNonQuery();
 
-            // 创建FTS5全文索引
-            using var createFtsCmd = connection.CreateCommand();
+            // 检查并添加 tail_code 列（针对旧数据库）- 在创建FTS表之前执行
+            using var checkTailCodeCmd = _sharedConnection.CreateCommand();
+            checkTailCodeCmd.CommandText = @"
+                SELECT COUNT(*) FROM pragma_table_info('image_index') WHERE name = 'tail_code';";
+            try
+            {
+                var count = (long)checkTailCodeCmd.ExecuteScalar();
+                if (count == 0)
+                {
+                    using var addColumnCmd = _sharedConnection.CreateCommand();
+                    addColumnCmd.CommandText = "ALTER TABLE image_index ADD COLUMN tail_code TEXT DEFAULT '';";
+                    addColumnCmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception)
+            {
+                // 列可能已存在，忽略
+            }
+
+            // 删除旧的FTS表（如果存在），因为它可能引用了不存在的列
+            using var dropFtsCmd = _sharedConnection.CreateCommand();
+            dropFtsCmd.CommandText = "DROP TABLE IF EXISTS image_fts;";
+            dropFtsCmd.ExecuteNonQuery();
+
+            // 删除旧的触发器
+            using var dropTriggerCmd = _sharedConnection.CreateCommand();
+            dropTriggerCmd.CommandText = @"
+                DROP TRIGGER IF EXISTS image_fts_ai;
+                DROP TRIGGER IF EXISTS image_fts_ad;
+                DROP TRIGGER IF EXISTS image_fts_au;";
+            dropTriggerCmd.ExecuteNonQuery();
+
+            // 重新创建FTS表
+            using var createFtsCmd = _sharedConnection.CreateCommand();
             createFtsCmd.CommandText = @"
                 CREATE VIRTUAL TABLE IF NOT EXISTS image_fts USING fts5(
                     file_path,
                     ocr_text,
+                    tail_code,
                     content='image_index',
                     content_rowid='id'
                 );";
             createFtsCmd.ExecuteNonQuery();
 
-            // 创建触发器保持FTS索引同步
-            using var createTriggerCmd = connection.CreateCommand();
+            // 重新创建触发器
+            using var createTriggerCmd = _sharedConnection.CreateCommand();
             createTriggerCmd.CommandText = @"
                 CREATE TRIGGER IF NOT EXISTS image_fts_ai AFTER INSERT ON image_index BEGIN
-                    INSERT INTO image_fts(rowid, file_path, ocr_text) VALUES (new.id, new.file_path, new.ocr_text);
+                    INSERT INTO image_fts(rowid, file_path, ocr_text, tail_code) VALUES (new.id, new.file_path, new.ocr_text, new.tail_code);
                 END;
                 CREATE TRIGGER IF NOT EXISTS image_fts_ad AFTER DELETE ON image_index BEGIN
-                    INSERT INTO image_fts(image_fts, rowid, file_path, ocr_text) VALUES ('delete', old.id, old.file_path, old.ocr_text);
+                    INSERT INTO image_fts(image_fts, rowid, file_path, ocr_text, tail_code) VALUES ('delete', old.id, old.file_path, old.ocr_text, old.tail_code);
                 END;
                 CREATE TRIGGER IF NOT EXISTS image_fts_au AFTER UPDATE ON image_index BEGIN
-                    INSERT INTO image_fts(image_fts, rowid, file_path, ocr_text) VALUES ('delete', old.id, old.file_path, old.ocr_text);
-                    INSERT INTO image_fts(rowid, file_path, ocr_text) VALUES (new.id, new.file_path, new.ocr_text);
+                    INSERT INTO image_fts(image_fts, rowid, file_path, ocr_text, tail_code) VALUES ('delete', old.id, old.file_path, old.ocr_text, old.tail_code);
+                    INSERT INTO image_fts(rowid, file_path, ocr_text, tail_code) VALUES (new.id, new.file_path, new.ocr_text, new.tail_code);
                 END;";
             createTriggerCmd.ExecuteNonQuery();
 
-            // 创建MD5索引提高去重查询速度
-            using var createMd5IndexCmd = connection.CreateCommand();
+            using var createMd5IndexCmd = _sharedConnection.CreateCommand();
             createMd5IndexCmd.CommandText = @"
                 CREATE INDEX IF NOT EXISTS idx_image_index_md5 ON image_index(md5);";
             createMd5IndexCmd.ExecuteNonQuery();
 
-            // 创建file_path索引
-            using var createPathIndexCmd = connection.CreateCommand();
+            using var createPathIndexCmd = _sharedConnection.CreateCommand();
             createPathIndexCmd.CommandText = @"
                 CREATE INDEX IF NOT EXISTS idx_image_index_file_path ON image_index(file_path);";
             createPathIndexCmd.ExecuteNonQuery();
+
+            using var createTailCodeIndexCmd = _sharedConnection.CreateCommand();
+            createTailCodeIndexCmd.CommandText = @"
+                CREATE INDEX IF NOT EXISTS idx_tail_code ON image_index(tail_code);";
+            createTailCodeIndexCmd.ExecuteNonQuery();
         }
 
         public bool IsMd5Exists(string md5)
         {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
-
-            using var cmd = connection.CreateCommand();
+            using var cmd = _sharedConnection.CreateCommand();
             cmd.CommandText = "SELECT COUNT(*) FROM image_index WHERE md5 = @md5";
             cmd.Parameters.AddWithValue("@md5", md5);
 
@@ -153,29 +191,24 @@ namespace ImageSearch.Data
 
         public bool IsFilePathExists(string filePath)
         {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
-
-            using var cmd = connection.CreateCommand();
+            using var cmd = _sharedConnection.CreateCommand();
             cmd.CommandText = "SELECT COUNT(*) FROM image_index WHERE file_path = @filePath";
             cmd.Parameters.AddWithValue("@filePath", filePath);
 
             return (long)cmd.ExecuteScalar() > 0;
         }
 
-        public void InsertImageIndex(string filePath, string ocrText, string md5, DateTime lastModified)
+        public void InsertImageIndex(string filePath, string ocrText, string tailCode, string md5, DateTime lastModified)
         {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
+            using var transaction = _sharedConnection.BeginTransaction();
 
-            using var transaction = connection.BeginTransaction();
-
-            using var cmd = connection.CreateCommand();
+            using var cmd = _sharedConnection.CreateCommand();
             cmd.CommandText = @"
-                INSERT OR REPLACE INTO image_index (file_path, ocr_text, md5, create_time, last_modified)
-                VALUES (@filePath, @ocrText, @md5, @createTime, @lastModified)";
+                INSERT OR REPLACE INTO image_index (file_path, ocr_text, tail_code, md5, create_time, last_modified)
+                VALUES (@filePath, @ocrText, @tailCode, @md5, @createTime, @lastModified)";
             cmd.Parameters.AddWithValue("@filePath", filePath);
             cmd.Parameters.AddWithValue("@ocrText", ocrText);
+            cmd.Parameters.AddWithValue("@tailCode", tailCode ?? "");
             cmd.Parameters.AddWithValue("@md5", md5);
             cmd.Parameters.AddWithValue("@createTime", DateTime.Now);
             cmd.Parameters.AddWithValue("@lastModified", lastModified);
@@ -190,15 +223,12 @@ namespace ImageSearch.Data
             if (results == null || results.Count == 0)
                 return;
 
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            await connection.OpenAsync();
+            using var transaction = await _sharedConnection.BeginTransactionAsync();
 
-            using var transaction = await connection.BeginTransactionAsync();
-
-            using var cmd = connection.CreateCommand();
+            using var cmd = _sharedConnection.CreateCommand();
             cmd.CommandText = @"
-                INSERT OR REPLACE INTO image_index (file_path, ocr_text, md5, create_time, last_modified)
-                VALUES (@filePath, @ocrText, @md5, @createTime, @lastModified)";
+                INSERT OR REPLACE INTO image_index (file_path, ocr_text, tail_code, md5, create_time, last_modified)
+                VALUES (@filePath, @ocrText, @tailCode, @md5, @createTime, @lastModified)";
 
             var filePathParam = cmd.CreateParameter();
             filePathParam.ParameterName = "@filePath";
@@ -207,6 +237,10 @@ namespace ImageSearch.Data
             var ocrTextParam = cmd.CreateParameter();
             ocrTextParam.ParameterName = "@ocrText";
             cmd.Parameters.Add(ocrTextParam);
+
+            var tailCodeParam = cmd.CreateParameter();
+            tailCodeParam.ParameterName = "@tailCode";
+            cmd.Parameters.Add(tailCodeParam);
 
             var md5Param = cmd.CreateParameter();
             md5Param.ParameterName = "@md5";
@@ -226,6 +260,7 @@ namespace ImageSearch.Data
             {
                 filePathParam.Value = result.FilePath;
                 ocrTextParam.Value = result.OcrText;
+                tailCodeParam.Value = result.TailCode ?? "";
                 md5Param.Value = result.Md5;
                 createTimeParam.Value = now;
                 lastModifiedParam.Value = result.LastModified;
@@ -240,10 +275,7 @@ namespace ImageSearch.Data
         {
             var results = new List<string>();
 
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
-
-            using var cmd = connection.CreateCommand();
+            using var cmd = _sharedConnection.CreateCommand();
             
             if (fuzzy)
             {
@@ -271,14 +303,31 @@ namespace ImageSearch.Data
             return results;
         }
 
+        public List<string> SearchByTailCode(string query)
+        {
+            var results = new List<string>();
+
+            using var cmd = _sharedConnection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT file_path FROM image_index 
+                WHERE tail_code LIKE @pattern 
+                ORDER BY id DESC;";
+            cmd.Parameters.AddWithValue("@pattern", $"%{query}%");
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                results.Add(reader.GetString(0));
+            }
+
+            return results;
+        }
+
         public List<string> SearchByFuzzyLike(string query)
         {
             var results = new List<string>();
 
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
-
-            using var cmd = connection.CreateCommand();
+            using var cmd = _sharedConnection.CreateCommand();
             cmd.CommandText = @"
                 SELECT file_path FROM image_index 
                 WHERE ocr_text LIKE @pattern 
@@ -296,10 +345,7 @@ namespace ImageSearch.Data
 
         public int GetIndexedCount()
         {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
-
-            using var cmd = connection.CreateCommand();
+            using var cmd = _sharedConnection.CreateCommand();
             cmd.CommandText = "SELECT COUNT(*) FROM image_index";
 
             return Convert.ToInt32(cmd.ExecuteScalar());
@@ -307,16 +353,13 @@ namespace ImageSearch.Data
 
         public void ClearAll()
         {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
+            using var transaction = _sharedConnection.BeginTransaction();
 
-            using var transaction = connection.BeginTransaction();
-
-            using var deleteFtsCmd = connection.CreateCommand();
+            using var deleteFtsCmd = _sharedConnection.CreateCommand();
             deleteFtsCmd.CommandText = "DELETE FROM image_fts";
             deleteFtsCmd.ExecuteNonQuery();
 
-            using var deleteCmd = connection.CreateCommand();
+            using var deleteCmd = _sharedConnection.CreateCommand();
             deleteCmd.CommandText = "DELETE FROM image_index";
             deleteCmd.ExecuteNonQuery();
 
@@ -327,10 +370,7 @@ namespace ImageSearch.Data
         {
             var results = new List<string>();
 
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
-
-            using var cmd = connection.CreateCommand();
+            using var cmd = _sharedConnection.CreateCommand();
             cmd.CommandText = "SELECT file_path FROM image_index";
 
             using var reader = cmd.ExecuteReader();
@@ -344,15 +384,18 @@ namespace ImageSearch.Data
 
         public DateTime? GetLastModified(string filePath)
         {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
-
-            using var cmd = connection.CreateCommand();
+            using var cmd = _sharedConnection.CreateCommand();
             cmd.CommandText = "SELECT last_modified FROM image_index WHERE file_path = @filePath";
             cmd.Parameters.AddWithValue("@filePath", filePath);
 
             var result = cmd.ExecuteScalar();
             return result != DBNull.Value ? (DateTime?)result : null;
+        }
+
+        public void Dispose()
+        {
+            _sharedConnection?.Close();
+            _sharedConnection?.Dispose();
         }
     }
 }

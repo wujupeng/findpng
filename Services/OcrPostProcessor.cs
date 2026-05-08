@@ -24,7 +24,7 @@ namespace ImageSearch.Services
                 return string.Empty;
 
             text = text.ToUpper();
-            text = Regex.Replace(text, @"[^A-Z0-9]", "");
+            text = Regex.Replace(text, @"[^A-Z0-9\s\-]", "");
             return text;
         }
 
@@ -33,18 +33,27 @@ namespace ImageSearch.Services
             if (string.IsNullOrEmpty(text))
                 return string.Empty;
 
-            char[] chars = text.ToCharArray();
-            for (int i = 0; i < chars.Length; i++)
-            {
-                if (_fixMap.TryGetValue(chars[i], out char corrected))
-                {
-                    chars[i] = corrected;
-                }
-            }
-            return new string(chars);
+            // 找到主要是数字的片段再纠错，而不是全局替换
+            return Regex.Replace(text, @"[A-Z0-9]+", seg => CorrectSegment(seg.Value));
         }
 
-        public string ExtractTailCode(string text)
+        private string CorrectSegment(string seg)
+        {
+            // 如果这段超过80%是数字，则把混入的字母纠正为数字
+            int digitCount = seg.Count(char.IsDigit);
+            if (digitCount * 1.0 / seg.Length > 0.8)
+            {
+                return seg.Replace('O', '0').Replace('Q', '0')
+                          .Replace('I', '1').Replace('L', '1')
+                          .Replace('Z', '2')
+                          .Replace('S', '5')
+                          .Replace('B', '8');
+            }
+            // 否则保留字母原样（如序列号中的字母）
+            return seg;
+        }
+
+        public string ExtractTailCode(string text, int minLen = 4, int maxLen = 8)
         {
             if (string.IsNullOrEmpty(text))
                 return string.Empty;
@@ -52,40 +61,13 @@ namespace ImageSearch.Services
             string normalized = Normalize(text);
             string corrected = CorrectCharacters(normalized);
 
-            string tailCode = ExtractTailCodeFromRight(corrected);
-            if (!string.IsNullOrEmpty(tailCode))
-                return tailCode;
-
-            tailCode = ExtractTailCodeByRegex(corrected);
-            return tailCode;
-        }
-
-        private string ExtractTailCodeFromRight(string text)
-        {
-            if (text.Length < 4)
+            // 找所有纯数字片段，取最长的末尾片段
+            var matches = Regex.Matches(corrected, @"\d{" + minLen + @"," + maxLen + @"}");
+            if (matches.Count == 0) 
                 return string.Empty;
-
-            for (int i = text.Length - 4; i >= 0; i--)
-            {
-                string sub = text.Substring(i, 4);
-                if (sub.All(char.IsDigit))
-                    return sub;
-            }
-
-            return string.Empty;
-        }
-
-        private string ExtractTailCodeByRegex(string text)
-        {
-            Match m = Regex.Match(text, @"(\d{4})$");
-            if (m.Success)
-                return m.Groups[1].Value;
-
-            m = Regex.Match(text, @"\d{4}");
-            if (m.Success)
-                return m.Groups[0].Value;
-
-            return string.Empty;
+            
+            // 优先返回最靠近末尾的数字串
+            return matches[matches.Count - 1].Value;
         }
 
         public string ExtractBatchNo(string text, int length = 6)

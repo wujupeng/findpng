@@ -19,11 +19,10 @@ namespace ImageSearch.Services
         private int _processedCount;
         private int _totalCount;
         
-        // 工业级配置
-        private const int OCR_WORKER_COUNT = 4;           // 固定OCR线程数
-        private const int QUEUE_MAX_CAPACITY = 1000;      // 队列最大缓存
-        private const int BATCH_WRITE_SIZE = 100;         // 批量写入大小
-        private const long MEMORY_THRESHOLD = 1_500_000_000; // 内存压力阈值(1.5GB)
+        private const int OCR_WORKER_COUNT = 4;
+        private const int QUEUE_MAX_CAPACITY = 1000;
+        private const int BATCH_WRITE_SIZE = 100;
+        private const long MEMORY_THRESHOLD = 1_500_000_000;
 
         public event EventHandler<ScanProgressEventArgs>? ProgressChanged;
         public event EventHandler? ScanCompleted;
@@ -49,24 +48,19 @@ namespace ImageSearch.Services
 
                 OnProgressChanged(0, "开始扫描图片...");
 
-                // 创建带容量限制的阻塞队列
                 var imageQueue = new BlockingCollection<string>(QUEUE_MAX_CAPACITY);
                 var resultQueue = new BlockingCollection<ImageIndexResult>(QUEUE_MAX_CAPACITY);
                 
-                // 创建OCR信号量控制并发
                 var ocrSemaphore = new SemaphoreSlim(OCR_WORKER_COUNT, OCR_WORKER_COUNT);
 
-                // 启动DB写入线程（单线程）
                 var dbWriterTask = Task.Run(() => DatabaseWriter(resultQueue, _cancellationTokenSource.Token));
 
-                // 启动OCR Worker池
                 var ocrTasks = new List<Task>();
                 for (int i = 0; i < OCR_WORKER_COUNT; i++)
                 {
                     ocrTasks.Add(Task.Run(() => OcrWorker(imageQueue, resultQueue, ocrSemaphore, skipExisting, _cancellationTokenSource.Token)));
                 }
 
-                // Producer: 扫描线程
                 await Task.Run(() =>
                 {
                     foreach (var filePath in imageFiles)
@@ -74,20 +68,16 @@ namespace ImageSearch.Services
                         if (_cancellationTokenSource.Token.IsCancellationRequested)
                             break;
 
-                        // 内存压力控制
                         CheckMemoryPressure();
 
-                        // 阻塞直到队列有空间
                         imageQueue.Add(filePath, _cancellationTokenSource.Token);
                     }
                     imageQueue.CompleteAdding();
                 });
 
-                // 等待所有OCR Worker完成
                 await Task.WhenAll(ocrTasks);
                 resultQueue.CompleteAdding();
 
-                // 等待DB写入完成
                 await dbWriterTask;
 
                 OnProgressChanged(100, "索引建立完成");
@@ -169,7 +159,6 @@ namespace ImageSearch.Services
                     }
                 }
 
-                // 处理剩余数据
                 if (batch.Count > 0)
                 {
                     await _dbService.BatchInsertImageIndex(batch);
@@ -195,11 +184,10 @@ namespace ImageSearch.Services
                     .Where(file => _supportedExtensions.Contains(Path.GetExtension(file).ToLower()))
                     .ToList();
                 
-                // 记录找到的图片文件
                 if (imageFiles.Count > 0)
                 {
                     LogMessage($"Found {imageFiles.Count} images in {rootDirectory}");
-                    foreach (var img in imageFiles.Take(5)) // 最多记录5个
+                    foreach (var img in imageFiles.Take(5))
                     {
                         LogMessage($"  - {Path.GetFileName(img)}");
                     }
@@ -207,7 +195,7 @@ namespace ImageSearch.Services
                 
                 files.AddRange(imageFiles);
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedAccessException)
             {
                 LogMessage($"Access denied: {rootDirectory}");
             }
@@ -264,18 +252,28 @@ namespace ImageSearch.Services
 
                 if (!string.IsNullOrWhiteSpace(ocrText))
                 {
-                    LogMessage($"  - OCR Result: {ocrText.Substring(0, Math.Min(50, ocrText.Length))}...");
+                    LogMessage($"  - OCR Raw: {ocrText.Substring(0, Math.Min(50, ocrText.Length))}...");
+                    
+                    // 使用OcrPostProcessor处理OCR结果
+                    var processor = new OcrPostProcessor();
+                    var processed = processor.Process(ocrText);
+                    
+                    LogMessage($"  - Corrected: {processed.CorrectedText.Substring(0, Math.Min(50, processed.CorrectedText.Length))}...");
+                    LogMessage($"  - TailCode: {processed.TailCode}");
+                    
                     return new ImageIndexResult
                     {
                         FilePath = filePath,
-                        OcrText = ocrText,
+                        OcrText = processed.CorrectedText,
+                        TailCode = processed.TailCode,
                         Md5 = fileMd5,
                         LastModified = fileInfo.LastWriteTime
                     };
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                LogMessage($"  - Error: {ex.Message}");
             }
 
             return null;
@@ -299,6 +297,7 @@ namespace ImageSearch.Services
     {
         public string FilePath { get; set; } = string.Empty;
         public string OcrText { get; set; } = string.Empty;
+        public string TailCode { get; set; } = string.Empty;
         public string Md5 { get; set; } = string.Empty;
         public DateTime LastModified { get; set; }
     }

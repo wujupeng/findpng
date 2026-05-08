@@ -29,7 +29,25 @@ namespace ImageSearch.Services
 
             try
             {
-                // 首先尝试LIKE模糊搜索（确保数字能被正确搜索）
+                // 如果查询是纯数字（可能是尾码），优先搜索尾码列
+                if (query.All(char.IsDigit))
+                {
+                    var tailCodeResults = _dbService.SearchByTailCode(query);
+                    LogSearchAttempt($"Query: {query}, TailCode results: {tailCodeResults.Count}");
+                    
+                    if (tailCodeResults.Count > 0)
+                    {
+                        results.AddRange(tailCodeResults);
+                        foreach (var path in tailCodeResults.Take(3))
+                        {
+                            LogSearchAttempt($"  - Path: {path}, Exists: {File.Exists(path)}");
+                        }
+                        stopwatch.Stop();
+                        return new SearchResult(results, stopwatch.ElapsedMilliseconds);
+                    }
+                }
+
+                // 尝试LIKE模糊搜索
                 var fuzzyResults = _dbService.SearchByFuzzyLike(query);
                 
                 LogSearchAttempt($"Query: {query}, LIKE results: {fuzzyResults.Count}");
@@ -37,8 +55,7 @@ namespace ImageSearch.Services
                 if (fuzzyResults.Count > 0)
                 {
                     results.AddRange(fuzzyResults);
-                    // 记录实际返回的文件路径
-                    foreach (var path in fuzzyResults.Take(3)) // 最多记录3个
+                    foreach (var path in fuzzyResults.Take(3))
                     {
                         LogSearchAttempt($"  - Path: {path}, Exists: {File.Exists(path)}");
                     }
@@ -53,7 +70,6 @@ namespace ImageSearch.Services
             }
             catch (Exception ex)
             {
-                // 如果都失败，回退到LIKE搜索
                 LogSearchAttempt($"Search error: {ex.Message}");
                 results.AddRange(_dbService.SearchByFuzzyLike(query));
             }
